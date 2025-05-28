@@ -174,45 +174,37 @@ fdtd.set("z max bc", "PML")
 fdtd.save(FSP_FILENAME)
 fdtd.run()
 
-# ================== 数据处理 ==================
-# 获取透射率数据（返回字典，需提取'T'字段）
-top_data = fdtd.getresult("top_output", "T")
-top_trans = top_data['T'].flatten()  # 提取T字段并展平
+# 封装计算数据的函数
+def calculate_data(fdtd):
+    # 获取透射率数据（返回字典，需提取'T'字段）
+    top_data = fdtd.getresult("top_output", "T")
+    top_trans = top_data['T'].flatten()  # 提取T字段并展平
 
-bottom_data = fdtd.getresult("bottom_output", "T")
-bottom_trans = bottom_data['T'].flatten()
+    bottom_data = fdtd.getresult("bottom_output", "T")
+    bottom_trans = bottom_data['T'].flatten()
 
-# 获取波长数据
-monitor_freq = fdtd.getdata("top_output", "f").flatten()  # 频率数组（Hz，形状(21,)）
-wavelengths = 3e8 / monitor_freq  # 频率转波长（米）
-wavelengths_nm = wavelengths * 1e9  # 转换为纳米（单位：nm）
+    # 获取波长数据
+    monitor_freq = fdtd.getdata("top_output", "f").flatten()  # 频率数组（Hz，形状(21,)）
+    wavelengths = 3e8 / monitor_freq  # 频率转波长（米）
+    wavelengths_nm = wavelengths * 1e9  # 转换为纳米（单位：nm）
 
-# 计算平均功率比
-avg_top = np.mean(top_trans)
-avg_bottom = np.mean(bottom_trans)
-avg_ratio = avg_top / avg_bottom
+    # 计算平均功率比
+    avg_top = np.mean(top_trans)
+    avg_bottom = np.mean(bottom_trans)
+    avg_ratio = avg_top / avg_bottom
 
-# 计算损失功率和损失分贝
-loss_dB = -10 * np.log10(top_trans + bottom_trans)
-avg_loss_dB = np.mean(loss_dB)
+    # 计算损失功率和损失分贝
+    loss_dB = -10 * np.log10(top_trans + bottom_trans)
+    avg_loss_dB = np.mean(loss_dB)
 
-print(f"\n===== 关键指标 =====")
-print(f"平均上分光率: {avg_top:.4f} ({avg_top*100:.1f}%)")
-print(f"平均下分光率: {avg_bottom:.4f} ({avg_bottom*100:.1f}%)")
-print(f"功率比（上/下）: {avg_ratio:.2f}:1")
-print(f"平均损失分贝: {avg_loss_dB:.2f} dB")
+    print(f"\n===== 关键指标 =====")
+    print(f"平均上分光率: {avg_top:.4f} ({avg_top*100:.1f}%)")
+    print(f"平均下分光率: {avg_bottom:.4f} ({avg_bottom*100:.1f}%)")
+    print(f"功率比（上/下）: {avg_ratio:.2f}:1")
+    print(f"平均损失分贝: {avg_loss_dB:.2f} dB")
 
-# 绘图
-plt.rcParams['font.sans-serif'] = ['SimHei']
-plt.figure(figsize=(10, 5))
-plt.plot(wavelengths_nm, top_trans, 'b-', label='上分光率')
-plt.plot(wavelengths_nm, bottom_trans, 'r-', label='下分光率')
-plt.xlabel('波长 (nm)')
-plt.ylabel('透射率')
-plt.title('分光器性能')
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.savefig('splitter_performance.png', dpi=150)
-plt.show()
-os.system("pause")
+    return top_trans, bottom_trans, wavelengths_nm, avg_top, avg_bottom, avg_ratio, avg_loss_dB
+
+# 第一次运行仿真后计算数据
+calculate_data(fdtd)
+
