@@ -7,7 +7,8 @@ import numpy as np
 LOAD_EXISTING_FSP = False
 NEW_MATRIX = False
 FSP_FILENAME = "power_splitter_corrected.fsp"
-CSV_FILE_PATH = 'F:\PythonProjects\c-DNN\designed_structure.csv'
+# CSV_FILE_PATH = 'F:\PythonProjects\c-DNN\designed_structure.csv'  # 验证dnn出来的结构矩阵
+CSV_FILE_PATH = 'F:\PythonProjects\c-DNN\data\ceshi\matrix_5000.csv'
 pixel_size = 130e-9
 design_region_size = 2.6e-6
 substrate_height = 2e-6
@@ -28,6 +29,36 @@ if os.path.exists(CSV_FILE_PATH):
 else:
     raise FileNotFoundError(f"× 无法找到指定的CSV文件: {CSV_FILE_PATH}")
 
+
+def calculate_data(fdtd):
+    # 获取透射率数据（返回字典，需提取'T'字段）
+    top_data = fdtd.getresult("top_output", "T")
+    top_trans = top_data['T'].flatten()  # 提取T字段并展平
+
+    bottom_data = fdtd.getresult("bottom_output", "T")
+    bottom_trans = bottom_data['T'].flatten()
+
+    # 获取波长数据
+    monitor_freq = fdtd.getdata("top_output", "f").flatten()  # 频率数组（Hz，形状(21,)）
+    wavelengths = 3e8 / monitor_freq  # 频率转波长（米）
+    wavelengths_nm = wavelengths * 1e9  # 转换为纳米（单位：nm）
+
+    # 计算平均功率比
+    avg_top = np.mean(top_trans)
+    avg_bottom = np.mean(bottom_trans)
+    avg_ratio = avg_top / avg_bottom
+
+    # 计算损失功率和损失分贝
+    loss_dB = -10 * np.log10(top_trans + bottom_trans)
+    avg_loss_dB = np.mean(loss_dB)
+
+    print(f"\n===== 关键指标 =====")
+    print(f"平均上分光率: {avg_top:.4f} ({avg_top*100:.1f}%)")
+    print(f"平均下分光率: {avg_bottom:.4f} ({avg_bottom*100:.1f}%)")
+    print(f"功率比（上/下）: {avg_ratio:.2f}:1")
+    print(f"平均损失分贝: {avg_loss_dB:.2f} dB")
+
+    return top_trans, bottom_trans, wavelengths_nm, avg_top, avg_bottom, avg_ratio, avg_loss_dB
 
 #
 # # 结构矩阵生成
@@ -187,36 +218,9 @@ fdtd.save(FSP_FILENAME)
 fdtd.run()
 
 # 封装计算数据的函数
-def calculate_data(fdtd):
-    # 获取透射率数据（返回字典，需提取'T'字段）
-    top_data = fdtd.getresult("top_output", "T")
-    top_trans = top_data['T'].flatten()  # 提取T字段并展平
-
-    bottom_data = fdtd.getresult("bottom_output", "T")
-    bottom_trans = bottom_data['T'].flatten()
-
-    # 获取波长数据
-    monitor_freq = fdtd.getdata("top_output", "f").flatten()  # 频率数组（Hz，形状(21,)）
-    wavelengths = 3e8 / monitor_freq  # 频率转波长（米）
-    wavelengths_nm = wavelengths * 1e9  # 转换为纳米（单位：nm）
-
-    # 计算平均功率比
-    avg_top = np.mean(top_trans)
-    avg_bottom = np.mean(bottom_trans)
-    avg_ratio = avg_top / avg_bottom
-
-    # 计算损失功率和损失分贝
-    loss_dB = -10 * np.log10(top_trans + bottom_trans)
-    avg_loss_dB = np.mean(loss_dB)
-
-    print(f"\n===== 关键指标 =====")
-    print(f"平均上分光率: {avg_top:.4f} ({avg_top*100:.1f}%)")
-    print(f"平均下分光率: {avg_bottom:.4f} ({avg_bottom*100:.1f}%)")
-    print(f"功率比（上/下）: {avg_ratio:.2f}:1")
-    print(f"平均损失分贝: {avg_loss_dB:.2f} dB")
-
-    return top_trans, bottom_trans, wavelengths_nm, avg_top, avg_bottom, avg_ratio, avg_loss_dB
 
 # 第一次运行仿真后计算数据
 calculate_data(fdtd)
+
+os.system("pause")
 
