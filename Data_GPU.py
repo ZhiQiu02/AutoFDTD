@@ -1,6 +1,5 @@
 import importlib
 import os
-import time
 import numpy as np
 import csv
 
@@ -69,29 +68,26 @@ def is_valid_transmission(trans_data, max_total=1):
 
 # 批量创建空气孔的函数
 def create_airholes_batch(fdtd, structure_matrix):
-    try:
-        script_lines = [
-            "addstructuregroup;",  # 分号单独一行更清晰
-            "set('name', 'air_holes_group');",
-        ]
-        for i in range(20):
-            for j in range(20):
-                if structure_matrix[i, j] == 0:
-                    script_lines.append(f"addcircle;")
-                    script_lines.append(f"set('name', 'air_hole_{i}_{j}');")
-                    script_lines.append(f"set('x', {float((i - 9.5) * 130e-9)});")
-                    script_lines.append(f"set('y', {float((j - 9.5) * 130e-9)});")
-                    script_lines.append(f"set('z', {float(220e-9 / 2)});")
-                    script_lines.append(f"set('z span', {float(220e-9)});")
-                    script_lines.append(f"set('radius', {float(45e-9)});")
-                    script_lines.append(f"set('material', 'etch');")
-                    script_lines.append(f"select('air_hole_{i}_{j}');")
-                    script_lines.append(f"addtogroup('air_holes_group');")
-        fdtd.eval('\n'.join(script_lines))
-        return True
-    except Exception as e:
-        print(f"Error in create_airholes_batch: {str(e)}")
-        return False
+    script_lines = [
+        "addstructuregroup;",  # 分号单独一行更清晰
+        "set('name', 'air_holes_group');",
+    ]
+    # 关键修改：调整矩阵索引到FDTD坐标的映射
+    for i in range(20):  # 行（对应FDTD的y坐标）
+        for j in range(20):  # 列（对应FDTD的x坐标）
+            if structure_matrix[i, j] == 0:  # 矩阵中0表示空气孔
+                script_lines.append(f"addcircle;")
+                script_lines.append(f"set('name', 'air_hole_{i}_{j}');")
+                script_lines.append(f"set('x', {float((j - 9.5) * 130e-9)});")
+                script_lines.append(f"set('y', {float((9.5 - i) * 130e-9)});")
+                script_lines.append(f"set('z', {float(220e-9 / 2)});")
+                script_lines.append(f"set('z span', {float(220e-9)});")
+                script_lines.append(f"set('radius', {float(45e-9)});")
+                script_lines.append(f"set('material', 'etch');")
+                script_lines.append(f"select('air_hole_{i}_{j}');")
+                script_lines.append(f"addtogroup('air_holes_group');")
+
+    fdtd.eval('\n'.join(script_lines))
 
 
 # 保存数据集到CSV
@@ -167,21 +163,13 @@ try:
             # 创建随机结构
             structure_matrix = np.random.randint(0, 2, size=(20, 20))
             # 创建空气孔
-            # s = time.time()
             if not create_airholes_batch(fdtd, structure_matrix):
                 invalid_count += 1
                 continue
-            # 运行仿真
-            # e = time.time()
-            # print(f"第{iteration}次打孔耗时: {e - s} 秒")
-            # s1 = time.time()
-
             # 启用GPU加速
             # fdtd.eval("setresource('FDTD','GPU', true);")  # 启用GPU
 
             fdtd.run()
-            # e1 = time.time()
-            # print(f"第{iteration}次仿真耗时: {e1 - s1} 秒")
             # 获取数据
             trans_data = calculate_data(fdtd)
 
