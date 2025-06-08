@@ -5,8 +5,9 @@ import numpy as np
 
 # ================== 全局参数控制 ==================
 LOAD_EXISTING_FSP = False
-NEW_MATRIX = True
+NEW_MATRIX = False
 FSP_FILENAME = "power_splitter_corrected.fsp"
+CSV_FILE_PATH = 'F:\PythonProjects\c-DNN\designed_structure.csv'
 pixel_size = 130e-9
 design_region_size = 2.6e-6
 substrate_height = 2e-6
@@ -19,16 +20,26 @@ waveguide_width = 0.5e-6
 output_spacing = 1.5e-6
 waveguide_length = 3e-6
 
-# 结构矩阵生成
-MATRIX_FILE = 'structure_matrix.npy'
-if not NEW_MATRIX and os.path.exists(MATRIX_FILE):
-    structure_matrix = np.load(MATRIX_FILE)
-    print("已加载保存的20×20结构矩阵")
+
+# 检查CSV文件是否存在并加载
+if os.path.exists(CSV_FILE_PATH):
+    structure_matrix = np.loadtxt(CSV_FILE_PATH, delimiter=',')
+    print("√ 已从CSV文件加载结构矩阵")
 else:
-    # np.random.seed(42)
-    structure_matrix = np.random.randint(0, 2, size=(20, 20))
-    np.save(MATRIX_FILE, structure_matrix)
-    print("生成的新20×20结构矩阵已保存")
+    raise FileNotFoundError(f"× 无法找到指定的CSV文件: {CSV_FILE_PATH}")
+
+
+#
+# # 结构矩阵生成
+# MATRIX_FILE = 'structure_matrix.npy'
+# if not NEW_MATRIX and os.path.exists(MATRIX_FILE):
+#     structure_matrix = np.load(MATRIX_FILE)
+#     print("已加载保存的20×20结构矩阵")
+# else:
+#     # np.random.seed(42)
+#     structure_matrix = np.random.randint(0, 2, size=(20, 20))
+#     np.save(MATRIX_FILE, structure_matrix)
+#     print("生成的新20×20结构矩阵已保存")
 
 # ====== API连接部分 ======
 lumapi_path = r'C:\Program Files\Lumerical\v241\api\python\lumapi.py'
@@ -172,6 +183,7 @@ fdtd.set("z min bc", "PML")
 fdtd.set("z max bc", "PML")
 
 fdtd.save(FSP_FILENAME)
+
 fdtd.run()
 
 # 封装计算数据的函数
