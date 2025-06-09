@@ -3,11 +3,13 @@ import os
 import numpy as np
 
 # CSV_FILE_PATH = 'F:\PythonProjects\c-DNN\designed_structure.csv'  # 验证dnn出来的结构矩阵
-CSV_FILE_PATH = 'F:\PythonProjects\c-DNN\data\ceshi\matrix_5000.csv'
+# CSV_FILE_PATH = 'F:\PythonProjects\c-DNN\data\ceshi\matrix_5000.csv'
+CSV_FILE_PATH = 'asd.csv'
 
 structure_matrix = np.loadtxt(CSV_FILE_PATH, delimiter=',')
-
+'''
 def calculate_data(fdtd):
+    #21数据版本
     # 获取透射率数据（返回字典，需提取'T'字段）
     top_data = fdtd.getresult("top_output", "T")
     top_trans = top_data['T'].flatten()  # 提取T字段并展平
@@ -36,6 +38,19 @@ def calculate_data(fdtd):
     print(f"平均损失分贝: {avg_loss_dB:.2f} dB")
 
     return top_trans, bottom_trans, wavelengths_nm, avg_top, avg_bottom, avg_ratio, avg_loss_dB
+'''
+def calculate_data(fdtd):
+    try:
+        # 获取透射率数据（返回字典，需提取'T'字段）
+        top_data = fdtd.getresult("top_output", "T")
+        top_trans = top_data['T'].flatten()  # 提取T字段并展平
+
+        bottom_data = fdtd.getresult("bottom_output", "T")
+        bottom_trans = bottom_data['T'].flatten()
+        return np.concatenate([top_trans, bottom_trans])  # 合并上下端口数据
+    except Exception as e:
+        print(f"Error in calculate_data: {str(e)}")
+        return None
 
 def create_airholes_batch(fdtd, structure_matrix):
     script_lines = [
